@@ -2,14 +2,14 @@
   "version": 2,
   "builds": [
     {
-      "src": "api/pastelapp_bot.py",
+      "src": "/pastelapp_bot.py",
       "use": "@vercel/python"
     }
   ],
   "routes": [
     {
       "src": "/webhook",
-      "dest": "/api/pastelapp_bot.py"
+      "dest": "/pastelapp_bot.py"
     }
   ]
 }

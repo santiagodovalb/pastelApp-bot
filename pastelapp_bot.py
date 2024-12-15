@@ -1,9 +1,12 @@
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackContext, filters
 import requests
+import os
 
 # Your bot's token (replace with your actual token)
-TELEGRAM_BOT_TOKEN = "8019171087:AAFM2tw_lzIBI-Qk_3bRIXiTb3x3MkX7NX0"
+TELEGRAM_BOT_TOKEN = os.getenv("8019171087:AAFM2tw_lzIBI-Qk_3bRIXiTb3x3MkX7NX0")
 
 # Store user data for color and dibujo selections
 user_colors = {}
@@ -11,6 +14,12 @@ user_dibujos = {}
 
 # Base URL for your API
 API_BASE_URL = "https://infopills.onrender.com/pills"
+
+# Initialize FastAPI app
+app = FastAPI()
+
+# Initialize Telegram bot application
+application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
 # Start command: fetches colors from API
 async def start(update: Update, context: CallbackContext) -> None:
@@ -100,18 +109,24 @@ async def fallback(update: Update, context: CallbackContext) -> None:
         "Lo siento, no entendí tu mensaje. Por favor, usa el comando /start para comenzar."
     )
 
-# Setup bot and start polling
-def main() -> None:
-    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+# Webhook endpoint for Telegram
+@app.post("/webhook")
+async def webhook(request: Request):
+    update = Update.de_json(await request.json(), application.bot)
+    await application.update_queue.put(update)
+    return JSONResponse(content={"status": "ok"})
 
-    # Command to start bot and get color list
-    application.add_handler(CommandHandler("start", start))
+# Setup bot and set webhook
+async def on_startup():
+    await application.bot.set_webhook("https://yourdomain.com/webhook")
 
-    # Unified message handler
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
+# Command to start bot and get color list
+application.add_handler(CommandHandler("start", start))
 
-    # Start polling to interact with the bot
-    application.run_polling()
+# Unified message handler
+application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
 
+# Run FastAPI app with Uvicorn
 if __name__ == "__main__":
-    main()
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000, on_startup=[on_startup])
